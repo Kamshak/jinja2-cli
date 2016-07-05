@@ -159,7 +159,14 @@ from jinja2 import Environment, FileSystemLoader
 def format_data(format_, data):
     return formats[format_][0](data)
 
+# force the return value of a function to be unicode.  Use with partial to
+# ensure that a filter will return unicode values.
+# Function taken from Ansible (c) 2012, Jeroen Hoekx <jeroen@hoekx.be>
+def unicode_wrap(func, *args, **kwargs):
+    return to_unicode(func(*args, **kwargs), nonstring='passthru')
 
+import base64
+from functools import partial
 def render(template_path, data, extensions, strict=False):
     env = Environment(
         loader=FileSystemLoader(os.path.dirname(template_path)),
@@ -172,6 +179,8 @@ def render(template_path, data, extensions, strict=False):
 
     # Add environ global
     env.globals['environ'] = os.environ.get
+    env.filters["b64encode"] = partial(unicode_wrap, base64.b64encode)
+    env.filters["b64decode"] = partial(unicode_wrap, base64.b64decode)
 
     output = env.get_template(os.path.basename(template_path)).render(data)
     return output.encode('utf-8')
